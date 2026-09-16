@@ -44,22 +44,25 @@ Building on the shifting and feedback concepts mastered in Multisim, the project
 * **Justification:** A 4-register architecture (2-bit address fields) creates software-side execution bottlenecks, forcing frequent data "spills" to RAM. An 8-register file strikes the ideal balance—minimizing internal FPGA multiplexer trees while giving assembly programs a comfortable layout of workspaces.
 
 ### 4. Instruction Word Bit-Budgeting
-The architecture enforces fixed-length **16-bit instruction words** to eliminate multi-cycle instruction fetching overhead. For standard three-operand math and logical instructions (e.g., `ADD R_dest, R_srcA, R_srcB`), the bit fields are explicitly allocated as follows:
+The architecture enforces fixed-length **16-bit instruction words** to eliminate multi-cycle instruction fetching overhead. For standard register-to-register ALU instructions (R-Type), the bit fields are explicitly allocated to balance opcode space and register flexibility:
 
- 15          9   8       6   5       3   2       0
-+-------------+-------------+-------------+-------------+
+```text
+ 15      11 10     8 7      5 4      2 1    0
++----------+--------+--------+--------+------+
 
-|   OPCODE    |   R_dest    |   R_srcA    |   R_srcB    |
-|   (7 bits)  |  (3 bits)   |  (3 bits)   |  (3 bits)   |
-+-------------+-------------+-------------+-------------+
+|  OPCODE  | R_dest | R_srcA | R_srcB | Rsrvd|
+| (5 bits) |(3 bits)|(3 bits)|(3 bits)| (2b) |
++----------+--------+--------+--------+------+
+```
 
-* **Register Address Fields:** 3 registers × 3 bits = **9 bits total**
-* **Remaining Opcode Space:** 16 bits - 9 bits = **7 bits remaining**
-* **Scalability:** A 7-bit opcode field provides up to **128 unique operation codes ($2^7$)**, which easily fits our lean custom ISA goals while leaving massive headroom for expansion.
+* **Opcode Field:** 5 bits allows for up to **32 unique operation codes**, easily accommodating our core instruction mix while leaving plenty of headroom for future extensions.
+* **Register Address Fields:** 3 register fields (Destination, Source A, Source B) × 3 bits each = **9 bits total** to map across our 8 general-purpose registers.
+* **Reserved Bits:** 2 bits are padded as zero for standard ALU operations, leaving architectural space to handle alternate formats (like 5-bit constants for I-Type immediate instructions or 11-bit offsets for J-Type jumps).
 
 ---
 
 ## 🛠️ Upcoming Roadmap Milestones
-1. **Instruction Set Architecture (ISA) Definition:** Finalize the lean opcode map (including `LOAD`, `STORE`, `ADD`, `SUB`, and a custom bitwise `ROTATE`).
+1. **Instruction Set Architecture (ISA) Definition:** Finalize the lean 32-slot opcode map (including `LOAD`, `STORE`, `ADD`, `SUB`, and control flow branches).
 2. **Register File HDL:** Write and simulate the 8-register file module in Verilog with dual-read and single-write ports.
 3. **ALU Design:** Implement the 16-bit math engine, natively incorporating the circular shift logic developed in Phase 1.
+
